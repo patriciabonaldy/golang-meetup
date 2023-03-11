@@ -1,0 +1,92 @@
+Graceful Shutdown in Go services
+Golang Venezuela Meetup #2
+15 Mar 2023
+
+Patricia Bonaldy
+Golang Developer
+@bonaldypatricia
+
+https://github.com/patriciabonaldy
+
+* A look at the graceful shutdown and hard shutdown
+
+* What are graceful shutdown and hard shutdown?
+
+Graceful shutdown is when a computer is turned off by software function and the operating system (OS) is allowed to perform its tasks of
+safely shutting down processes and closing connections.
+
+Hard shutdown?
+
+.image https://cdn.someecards.com/posts/totally-random-memes-thatll-make-you-spit-out-your-morning-coffee-october-6-2017-21-kpmhkt-qk5SqG.jpg 400 _
+
+* Signals
+A signal is an event generated from UNIX and Linux systems in response to some condition and Go can listen to these events in app-level.
+
+- SIGTERM (signal that is sent for almost all shutdown events)
+- SIGKILL “quit immediately”
+- SIGINT user inputs an interrupt signal (such as Ctrl+C).
+- SIGQUIT user inputs an interrupt signal (such as Ctrl+C).
+.image https://b3019442.smushcdn.com/3019442/wp-content/uploads/2022/06/go-golang-programming-tutorial-examples.png?lossy=1&strip=1&webp=1 250 _
+
+* Anti-patterns
+
+* Block artificially
+
+.code -edit go-shutdown/anti-patterns/block_artificially.go
+.image https://media.giphy.com/media/Z3l1Oo5Ro9ZSw/giphy.gif 260 _
+
+* os.Exit()
+.play go-shutdown/anti-patterns/os_exit.go
+
+* Best practices
+* How to implement a graceful shutdown in Go
+
+- Using signal handling
+- Propagate the termination signal to multiple go routines
+- Wait for all the running go routines to exit
+
+ // we need to reserve to buffer size 1, so the notifier are not blocked
+ sigint:= make(chan os.Signal, 1)
+ signal.Notify(sigint, syscall.SIGINT, syscall.SIGTERM)
+
+- We need to use SIGINT to gracefully shutdown on Ctrl+C
+- Production environment, listening to SIGTERM should be enough.
+- Kubernetes pods send SIGTERM signal when terminating.
+
+* Using signal handling
+.play go-shutdown/best-practices/01signal_handling.go
+
+* Using Context
+
+Context is a standard package of Golang that makes it easy to pass request-scoped values, cancelation signals and deadlines across API boundaries to all the goroutines involved in handling a request.
+
+.image https://cdn.sanity.io/images/97bpcflt/production/09ce76bde20b9acf4c74e4339a3d5bef0dd9a104-549x418.jpg?auto=format&fit=max&w=1440 300 _
+
+* Context package, Syntax
+
+    Done() <- chan struct
+*-Returns a channel that is closed when the context is canceled or times out. Done may return nil if the context can never be canceled.
+
+    Deadline() (deadline time.Time, ok bool)
+*-Returns the time when the context will be canceled or timed out. Deadline returns ok==false when no deadline is set.
+
+    Err() error
+*-Returns an error that explains why the Done channel was closed. If Done is not closed yet, it returns nil.
+
+    Value(key interface{}) interface{}
+*-Returns the value associated with key or nil if none.
+
+* Using signal handling with context
+    .code go-shutdown/best-practices/02signal_and_context.go
+
+* Using signal handling, context, and wait for all the running go routines to exit
+    .code go-shutdown/best-practices/03signal_context_and_wg_group_to_close_connections.go
+
+* Resources
+
+.link https://pkg.go.dev/context#WithCancel
+.link https://pkg.go.dev/os/signal#NotifyContext/
+.link https://www.educative.io/answers/golang-context
+.link https://medium.com/tokopedia-engineering/gracefully-shutdown-your-go-application-9e7d5c73b5ac
+.link https://emretanriverdi.medium.com/graceful-shutdown-in-go-c106fe1a99d9
+
